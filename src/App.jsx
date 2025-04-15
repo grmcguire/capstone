@@ -9,9 +9,10 @@ const App = () => {
   const [filter, setFilter] = useState({ type: null, value: null });
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const utterancesContainerRef = useRef(null);
+  const [commentText, setCommentText] = useState('');
+  const [comments, setComments] = useState({});
   
-  // Load photos data initially
+  // Load photos data and comments initially
   useEffect(() => {
     const loadPhotosData = async () => {
       try {
@@ -20,6 +21,13 @@ const App = () => {
         setFilteredPhotos(shuffledImages);
         const uniqueAffiliations = [...new Set(imageData.map(photo => photo.affiliation))];
         setAffiliations(uniqueAffiliations);
+        
+        // Load comments from localStorage
+        const savedComments = localStorage.getItem('photoComments');
+        if (savedComments) {
+          setComments(JSON.parse(savedComments));
+        }
+        
         setLoading(false);
       } catch (error) {
         console.error("Error loading photos:", error);
@@ -34,26 +42,36 @@ const App = () => {
     loadPhotosData();
   }, []);
   
-  // Load Utterances when a photo is selected
-  useEffect(() => {
-    if (selectedPhoto && utterancesContainerRef.current) {
-      // Clear previous comments
-      utterancesContainerRef.current.innerHTML = '';
-      
-      // Create the utterances script
-      const script = document.createElement('script');
-      script.src = 'https://utteranc.es/client.js';
-      script.async = true;
-      script.crossOrigin = 'anonymous';
-      script.setAttribute('repo', 'grmcguire/comments'); // REPLACE WITH YOUR REPO
-      script.setAttribute('issue-term', `photo-${selectedPhoto.id}`); // Unique issue per photo
-      script.setAttribute('theme', 'github-light'); // You can choose different themes
-      script.setAttribute('label', 'comments'); // Optional: adds a label to GitHub issues
-      
-      // Add the script to the container
-      utterancesContainerRef.current.appendChild(script);
-    }
-  }, [selectedPhoto]);
+  // Handle adding a new comment
+  const handleAddComment = () => {
+    if (!commentText.trim() || !selectedPhoto) return;
+    
+    const newComment = {
+      id: Date.now(),
+      text: commentText,
+      date: new Date().toISOString(),
+      photoId: selectedPhoto.id
+    };
+    
+    // Update comments state
+    const photoComments = comments[selectedPhoto.id] || [];
+    const updatedComments = {
+      ...comments,
+      [selectedPhoto.id]: [...photoComments, newComment]
+    };
+    
+    // Save to localStorage
+    localStorage.setItem('photoComments', JSON.stringify(updatedComments));
+    
+    // Update state
+    setComments(updatedComments);
+    setCommentText('');
+  };
+  
+  // Get comments for the selected photo
+  const getPhotoComments = (photoId) => {
+    return comments[photoId] || [];
+  };
 
   // Filter photos by affiliation
   const handleFilter = (value) => {
@@ -130,6 +148,9 @@ const App = () => {
               onClick={() => openPhotoModal(photo)}
             >
               <img src={photo.url} alt={photo.title} />
+              {comments[photo.id] && comments[photo.id].length > 0 && (
+                <div className="comment-count">{comments[photo.id].length}</div>
+              )}
             </div>
           ))}
         </div>
@@ -160,10 +181,44 @@ const App = () => {
                 <p>{selectedPhoto.aiCaption}</p>
               </div>
               
-              {/* Utterances comments section */}
+              {/* Comments section */}
               <div className="comments-section">
                 <h3>Comments</h3>
-                <div ref={utterancesContainerRef} className="utterances-container"></div>
+                
+                <div className="comments-list">
+                  {getPhotoComments(selectedPhoto.id).length === 0 ? (
+                    <div className="no-comments">No comments yet. Be the first to comment!</div>
+                  ) : (
+                    getPhotoComments(selectedPhoto.id).map(comment => (
+                      <div key={comment.id} className="comment">
+                        <div className="comment-header">
+                          <span className="comment-author">Anonymous</span>
+                          <span className="comment-date">{new Date(comment.date).toLocaleDateString()}</span>
+                        </div>
+                        <p>{comment.text}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+                
+                <div className="comment-form">
+                  <h4>Add a Comment</h4>
+                  <div className="form-group">
+                    <textarea 
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Share your thoughts..."
+                      rows="3"
+                    ></textarea>
+                  </div>
+                  <button 
+                    className="submit-comment" 
+                    onClick={handleAddComment}
+                    disabled={!commentText.trim()}
+                  >
+                    Post Comment
+                  </button>
+                </div>
               </div>
             </div>
           </div>
