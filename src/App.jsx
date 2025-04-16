@@ -92,7 +92,9 @@ const App = () => {
   
   // Get comments for the selected photo
   const getPhotoComments = (photoId) => {
-    return comments[photoId] || [];
+    // Ensure we always return an array, even if comments[photoId] exists but isn't an array
+    const photoComments = comments[photoId];
+    return Array.isArray(photoComments) ? photoComments : [];
   };
 
   // Filter photos by affiliation
