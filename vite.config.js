@@ -7,12 +7,9 @@ export default defineConfig({
   build: {
     outDir: "build"
   },
+  // Server settings are only used in development and will be ignored by Vercel
   server: {
-    host:"0.0.0.0",
-    port:3000,
-    strictPort: true,
-    hmr: {
-      clientPort: 443 // Run the websocket server on the SSL port
-    }
+    host: "0.0.0.0",
+    port: 3000
   }
 });
