@@ -5,7 +5,7 @@ import './styles.css';
 
 // API base URL - adjust for production/development
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? '/api' // In production, API requests will be proxied through the same domain
+  ? '/api/comments' // In production, API requests will be proxied to Vercel serverless function
   : 'http://localhost:3001/api'; // In development, connect to local server
 
 const App = () => {
@@ -30,7 +30,9 @@ const App = () => {
         
         // Load comments from API
         try {
-          const response = await axios.get(`${API_URL}/comments`);
+          // In production, API_URL already includes 'comments'
+          const commentsEndpoint = process.env.NODE_ENV === 'production' ? API_URL : `${API_URL}/comments`;
+          const response = await axios.get(commentsEndpoint);
           if (response.data) {
             setComments(response.data);
           }
@@ -67,8 +69,9 @@ const App = () => {
     };
     
     try {
-      // Send comment to API
-      const response = await axios.post(`${API_URL}/comments`, commentData);
+      // Send comment to API - in production, API_URL already includes 'comments'
+      const commentsEndpoint = process.env.NODE_ENV === 'production' ? API_URL : `${API_URL}/comments`;
+      const response = await axios.post(commentsEndpoint, commentData);
       const newComment = response.data;
       
       // Update comments state
