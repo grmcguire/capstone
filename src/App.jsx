@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import imageData from './imageData';
+import axios from 'axios';
 import './styles.css';
+
+// API base URL - adjust for production/development
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? '/api' // In production, API requests will be proxied through the same domain
+  : 'http://localhost:3001/api'; // In development, connect to local server
 
 const App = () => {
   const [photos, setPhotos] = useState([]);
@@ -22,10 +28,19 @@ const App = () => {
         const uniqueAffiliations = [...new Set(imageData.map(photo => photo.affiliation))];
         setAffiliations(uniqueAffiliations);
         
-        // Load comments from localStorage
-        const savedComments = localStorage.getItem('photoComments');
-        if (savedComments) {
-          setComments(JSON.parse(savedComments));
+        // Load comments from API
+        try {
+          const response = await axios.get(`${API_URL}/comments`);
+          if (response.data) {
+            setComments(response.data);
+          }
+        } catch (commentError) {
+          console.error("Error loading comments from API:", commentError);
+          // Fallback to localStorage if API fails
+          const savedComments = localStorage.getItem('photoComments');
+          if (savedComments) {
+            setComments(JSON.parse(savedComments));
+          }
         }
         
         setLoading(false);
@@ -43,29 +58,36 @@ const App = () => {
   }, []);
   
   // Handle adding a new comment
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!commentText.trim() || !selectedPhoto) return;
     
-    const newComment = {
-      id: Date.now(),
-      text: commentText,
-      date: new Date().toISOString(),
-      photoId: selectedPhoto.id
+    const commentData = {
+      photoId: selectedPhoto.id,
+      text: commentText
     };
     
-    // Update comments state
-    const photoComments = comments[selectedPhoto.id] || [];
-    const updatedComments = {
-      ...comments,
-      [selectedPhoto.id]: [...photoComments, newComment]
-    };
-    
-    // Save to localStorage
-    localStorage.setItem('photoComments', JSON.stringify(updatedComments));
-    
-    // Update state
-    setComments(updatedComments);
-    setCommentText('');
+    try {
+      // Send comment to API
+      const response = await axios.post(`${API_URL}/comments`, commentData);
+      const newComment = response.data;
+      
+      // Update comments state
+      const photoComments = comments[selectedPhoto.id] || [];
+      const updatedComments = {
+        ...comments,
+        [selectedPhoto.id]: [...photoComments, newComment]
+      };
+      
+      // Also save to localStorage as backup
+      localStorage.setItem('photoComments', JSON.stringify(updatedComments));
+      
+      // Update state
+      setComments(updatedComments);
+      setCommentText('');
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      alert("Failed to save your comment. Please try again.");
+    }
   };
   
   // Get comments for the selected photo
