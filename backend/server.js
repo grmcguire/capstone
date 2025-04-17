@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
+const { getAllComments, addComment } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,39 +9,15 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Data file path
-const dataPath = path.join(__dirname, 'comments.json');
-
-// Helper function to read comments data
-const readComments = () => {
-  try {
-    if (!fs.existsSync(dataPath)) {
-      fs.writeFileSync(dataPath, JSON.stringify({}), 'utf8');
-      return {};
-    }
-    const data = fs.readFileSync(dataPath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error reading comments:', error);
-    return {};
-  }
-};
-
-// Helper function to write comments data
-const writeComments = (data) => {
-  try {
-    fs.writeFileSync(dataPath, JSON.stringify(data), 'utf8');
-    return true;
-  } catch (error) {
-    console.error('Error writing comments:', error);
-    return false;
-  }
-};
-
 // Get all comments
-app.get('/api/comments', (req, res) => {
-  const comments = readComments();
-  res.json(comments);
+app.get('/api/comments', async (req, res) => {
+  try {
+    const comments = await getAllComments();
+    res.json(comments);
+  } catch (error) {
+    console.error('Error getting comments:', error);
+    res.status(500).json({ error: 'Failed to get comments' });
+  }
 });
 
 // Get comments for a specific photo
@@ -53,28 +28,24 @@ app.get('/api/comments/:photoId', (req, res) => {
 });
 
 // Add a new comment
-app.post('/api/comments', (req, res) => {
+app.post('/api/comments', async (req, res) => {
   const { photoId, text } = req.body;
   
   if (!photoId || !text) {
     return res.status(400).json({ error: 'Photo ID and comment text are required' });
   }
   
-  const comments = readComments();
-  const newComment = {
-    id: Date.now(),
-    text,
-    date: new Date().toISOString(),
-    photoId
-  };
-  
-  // Update comments
-  const photoComments = comments[photoId] || [];
-  comments[photoId] = [...photoComments, newComment];
-  
-  if (writeComments(comments)) {
-    res.status(201).json(newComment);
-  } else {
+  try {
+    const newComment = {
+      photoId,
+      text,
+      date: new Date().toISOString()
+    };
+    
+    const savedComment = await addComment(newComment);
+    res.status(201).json(savedComment);
+  } catch (error) {
+    console.error('Error adding comment:', error);
     res.status(500).json({ error: 'Failed to save comment' });
   }
 });

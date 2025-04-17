@@ -30,7 +30,6 @@ const App = () => {
         
         // Load comments from API
         try {
-          // In production, API_URL already includes 'comments'
           const commentsEndpoint = process.env.NODE_ENV === 'production' ? API_URL : `${API_URL}/comments`;
           const response = await axios.get(commentsEndpoint);
           if (response.data) {
@@ -38,11 +37,8 @@ const App = () => {
           }
         } catch (commentError) {
           console.error("Error loading comments from API:", commentError);
-          // Fallback to localStorage if API fails
-          const savedComments = localStorage.getItem('photoComments');
-          if (savedComments) {
-            setComments(JSON.parse(savedComments));
-          }
+          // Show error message to user
+          alert("Failed to load comments. Please try refreshing the page.");
         }
         
         setLoading(false);
@@ -69,7 +65,6 @@ const App = () => {
     };
     
     try {
-      // Send comment to API - in production, API_URL already includes 'comments'
       const commentsEndpoint = process.env.NODE_ENV === 'production' ? API_URL : `${API_URL}/comments`;
       const response = await axios.post(commentsEndpoint, commentData);
       const newComment = response.data;
@@ -80,9 +75,6 @@ const App = () => {
         ...comments,
         [selectedPhoto.id]: [...photoComments, newComment]
       };
-      
-      // Also save to localStorage as backup
-      localStorage.setItem('photoComments', JSON.stringify(updatedComments));
       
       // Update state
       setComments(updatedComments);
