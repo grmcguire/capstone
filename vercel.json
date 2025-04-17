@@ -5,12 +5,5 @@
   ],
   "buildCommand": "pnpm run build",
   "outputDirectory": "build",
-  "framework": "vite",
-  "functions": {
-    "api/**/*": {
-      "runtime": "@vercel/node@18.x",
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  }
+  "framework": "vite"
 }
